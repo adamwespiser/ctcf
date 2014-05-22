@@ -94,7 +94,11 @@ registerDoParallel(10)
 downloadJan2011FreezeFilesTxt <- function(){
   fetchEncodeFilesTxt(urlAddr=jan11FreezeUrl,localAddr=jan11FreezeLocal,localTabAddr=jan11FreezeLocalTab)
   fetchEncodeFilesTxt(urlAddr=cshlRNAseqUrl,localAddr=cshlRNAseqLocal,localTabAddr=cshlRNAseqLocalTab)
-  fetchEncodeFilesTxt(urlAddr=sydhTfbsUrl,localAddr=sydhTfbsLocal,localTabAddr=sydhTfbsUrlLocalTab)
+  fetchEncodeFilesTxt(urlAddr=sydhTfbsUrl,localAddr=sydhTfbsLocal,localTabAddr=sydhTfbsLocalTab)
+  fetchEncodeFilesTxt(urlAddr=haibTfbsUrl,localAddr=haibTfbsLocal,localTabAddr=haibTfbsLocalTab)
+  fetchEncodeFilesTxt(urlAddr=UchicagoTfbsUrl,localAddr=UchicagoTfbsLocal,localTabAddr=UchicagoTfbsLocalTab)
+  fetchEncodeFilesTxt(urlAddr=uwTfbsUrl,localAddr=uwTfbsLocal,localTabAddr=uwTfbsLocalTab)
+  
   
 }
 
