@@ -51,7 +51,8 @@ list.of.packages <- c(
   "devtools", # for github installs
   "stringr",
   "plyr",
-  "dplyr"
+  "dplyr",
+  "RCurl"
 )
 
 

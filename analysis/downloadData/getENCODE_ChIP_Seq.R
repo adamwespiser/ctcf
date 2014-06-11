@@ -321,13 +321,31 @@ getCtcfWithRNASeq <- function(){
   
   # /home/aw30w/bin/MACS-master/bin/macs2 callpeak -t ChIP.bam -c Control.bam -f BAM -g hs -n test -B -q 0.01
   # https://github.com/taoliu/MACS/
-  macs2 <-  paste0("/home/aw30w/bin/MACS-master/bin/macs2 callpeak -t ",tfbs.peaks$localFile,
+  macs2.cmd <-  paste0("python /home/aw30w/bin/MACS-master/bin/macs2 callpeak -t ",tfbs.peaks$localFile,
                            " -c ",tfbs.peaks$localFile.cntrl,
                            " -f BAM -g hs -B -q 0.01 ",
-                           " -n ",tfbs.peaks$nameFile )
-  write(file="~/sandbox/macs2_ctcf", macs2)
+                           " -n ",tfbs.peaks$nameFile)
+  write(file="~/sandbox/macs2_ctcf", macs2.cmd)
+  
+  
+  
+  
   # scpFile(file.local="~/sandbox/macs2_ctcf", dir.remote="~/bin/") 
-  # perl /home/aw30w/bin/runTask.pl -f ~/bin/macs2_ctcf -c 24 -m 2024 -W 600 -Q short -t ctcfMacs2
+  # perl /home/aw30w/bin/runTask.pl -f ~/bin/macs2_ctcf -c 24 -m 2024 -W 720 -Q short -t ctcfMacs2
+
+  localDir <- "/home/wespisea/data/ctcf/MACS2/"
+  
+  if(TRUE == getFile){
+    dir.create(localDir,recursive=TRUE)
+    o1 <- paste0("scp aw30w@ghpcc06.umassrc.org:",tfbs.peaks$nameFile, "*{narrowPeak,pdf}  ",localDir)
+    write(o1,file="~/sandbox/ctcfMacsFetch")
+    system("chmod u+x ~/sandbox/ctcfMacsFetch")
+    suppressWarnings(system("~/sandbox/ctcfMacsFetch"))
+    
+  }
+  tfbs.peaks$narrowPeak <- with(tfbs.peaks,paste0(localDir,"/",name,"_peaks.narrowPeak"))
+  
+
 }
 
 getLastUrl <- function(x){
@@ -361,9 +379,145 @@ getCtcfPeakSeqWithRNASeq <- function(){
             text=paste(rnaSeq.peaks.df$downloadCmd,rep(c("&",""),times=length(rnaSeq.peaks.df$downloadCmd))))
   
   # scpFile(file.local="~/sandbox/downloadCTCF", dir.remote="~/bin/") 
-
-
+  
+  
+  
+  #/home/wespisea/bin/bedtools2/bin/intersectBed -wo -a /home/wespisea/work/research/researchProjects/coexpr/lncNET/data/exonCosi_dsRegion.bed6 -b UwTfbsNhlfCtcfStdAlnRep1_UwTfbsNhlfInputStdAlnRep1_peaks.narrowPeak > ~/sandbox/bedBug
+  
+  
   
   
 }
+
+
+
+getCosiFileExons <- funciton(){
+  dataDir <- getFullPath("data")
+  trg <- paste0(trg,"/tx_paper.cosi.tsv")
+  download.file(url="http://genome.crg.es/~dmitri/export/2014-06-02/tx_paper.cosi.tsv",
+                destfile=trg)
+}
+
+getCosiFileCellTypes <- funciton(){
+  dataDir <- getFullPath("data")
+  trg <- paste0(dataDir,"/tx_paper.cosi.tsv")
+  finalOut <- paste0(dataDir,"/exonCosi_dsRegion.tab")
+  dsFinalOut <- paste0(dataDir,"/exonCosi_dsRegion.bed6")
+  
+  
+  exonBedFile <- paste0(dataDir,"/tx_paper.exon.bed6")
+  exonDownstreamBedFile <- paste0(dataDir,"/tx_paper.exonDownStream.bed6")
+  exonBedFileSort <- paste0(dataDir,"/tx_paper.exon.sort.bed6")
+  exonDownstreamBedFileSort <- paste0(dataDir,"/tx_paper.exonDownStream.sort.bed6")
+  exonDownstreamBedFileSortNoExonOverlap <- paste0(dataDir,"/tx_paper.exonDownStream.noExOverlap.sort.bed6")
+  
+  # 1000 bp downstream, stop at next starting exon 
+  exonDownstreamBedFileSortNoExonOverlapFirst <- paste0(dataDir,"/tx_paper.exonDownStream.noExOverlap.first.sort.bed6")
+  
+  
+  trg.df <- read.csv(file=trg,stringsAsFactors=FALSE,sep="\t")
+  cols <- colnames(trg.df)
+  rw <-strsplit(rownames(trg.df),"_")
+  trg.df$chr <- sapply(rw, function(x)x[1])  
+  # format(moDat2, scientific=FALSE)
+  trg.df$startPos <- sapply(rw, function(x)as.numeric(x[2])) 
+  trg.df$stopPos <- sapply(rw, function(x)as.numeric(x[3]))
+  trg.df$strand <- sapply(rw, function(x)x[4])
+  trg.df$label <- with(trg.df,paste0(chr,":",format(startPos, scientific=FALSE,collapse=TRUE),"-",format(stopPos, scientific=FALSE),"_",strand,sep=""))
+  trg.df$label <- gsub(trg.df$label, pattern=" ",replacement="")
+  trg.df$zero <- 0
+  # chr5 100000 500000 read1 50 +
+  write.table(format(trg.df[c("chr","startPos","stopPos","label","zero","strand")], scientific=FALSE),file=exonBedFile,sep="\t",quote=FALSE,col.names=FALSE,row.names=FALSE)  
+  
+  trg.df$dsStart <- ifelse(trg.df$strand == "+", trg.df$stopPos, trg.df$startPos - 1000)
+  trg.df$dsStop <- ifelse(trg.df$strand == "+", trg.df$stopPos + 1000, trg.df$startPos)
+  write.table(format(trg.df[c("chr","dsStart","dsStop","label","zero","strand")], scientific=FALSE),
+    file=exonDownstreamBedFile,sep="\t",quote=FALSE,col.names=FALSE,row.names=FALSE)
+  
+  cmd1 <- paste("/home/wespisea/bin/bedtools2/bin/sortBed",
+         " -i ", exonBedFile,
+          " > ",exonBedFileSort) 
+  
+  cmd2 <- paste("/home/wespisea/bin/bedtools2/bin/sortBed",
+        " -i ", exonDownstreamBedFile,
+        " > ", exonDownstreamBedFileSort) 
+  
+  
+  cmd3 <- paste("/home/wespisea/bin/bedtools2/bin/subtractBed -s ",
+        " -a ", exonDownstreamBedFileSort, 
+        " -b ", exonBedFileSort,
+        " > ",exonDownstreamBedFileSortNoExonOverlap)
+  
+  system(cmd1);system(cmd2);system(cmd3)
+  
+  ds.df <- read.csv(file=exonDownstreamBedFileSortNoExonOverlap, stringsAsFactors=FALSE,
+                    sep="\t",header=FALSE)
+  colnames(ds.df) <- c("chr","startPos","stopPos","label","zero","strand")
+  ds.plus.df <- ds.df[which(ds.df$strand == "+"),]
+  ds.minus.df <- ds.df[which(ds.df$strand == "-"),]
+  
+  ds.plus.first <- as.data.frame(group_by(ds.plus.df, label) %.% 
+                                   mutate(minStartPos = min(startPos)) %.%
+                                   filter(startPos == minStartPos))
+  ds.plus.first$minStartPos <- NULL
+  
+  ds.minus.first <- as.data.frame(group_by(ds.minus.df, label) %.% 
+                                   mutate(maxStartPos = max(startPos)) %.%
+                                   filter(startPos == maxStartPos))
+  ds.minus.first$maxStartPos <- NULL
+  
+  ds.first.comb <- rbind(ds.plus.first,ds.minus.first)
+  tmp <- paste0(tempfile(),".bed6")
+  write.table(ds.first.comb,
+              file=tmp,sep="\t",quote=FALSE,col.names=FALSE,row.names=FALSE)
+  cmd4 <- paste("/home/wespisea/bin/bedtools2/bin/sortBed",
+                " -i ", tmp,
+                " > ", exonDownstreamBedFileSortNoExonOverlapFirst) 
+  system(cmd4)
+  
+  ggplot(ds.first.comb, aes(stopPos - startPos)) + geom_bar(binwith=10)
+  
+  rnaSeq <- read.csv(file=cshlRNAseqLocalTab,sep="\t",stringsAsFactor=FALSE)
+  rnaSeq <- rnaSeq[which(rnaSeq$type == "fastq"),]
+  rnaSeq$fileEnding <- rnaSeq$filename
+  rnaSeq$filename <- paste0(cshlRNAseqUrlBase,rnaSeq$filename)
+  rnaSeq$exp <- with(rnaSeq,paste(cell,localization,rnaExtract,replicate,sep="_"))
+  rnaSeqLID <- unique(rnaSeq[c("labExpId","exp","cell")])
+  
+  cols.split <- strsplit(cols, split="_")
+  cols.one <- sapply(cols.split, function(x)x[1])  
+  cols.two <- sapply(cols.split, function(x)x[2])  
+  
+  cols.one.exp <- sapply(cols.one, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"exp"])
+  cols.two.exp <- sapply(cols.two, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"exp"])
+  
+  cols.one.cell <- sapply(cols.one, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"cell"])
+  cols.two.cell <- sapply(cols.two, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"cell"])
+  
+  newCols <- gsub(x=gsub(x=as.character(unlist(cols.one.cell)),pattern="-",replacement=""),pattern="\\+",replacement="")
+  
+  oldCols <- colnames(trg.df)
+  oldCols[1:length(newCols)] <- newCols
+  colnames(trg.df) <- oldCols
+  
+  
+  paste(cols.one.exp,cols.two.exp,sep="--")
+  
+  
+  comb <- merge(y=ds.first.comb,x=trg.df, by =  c("label","zero","strand"),suffixes=c("",".ds"))
+  write.table(comb,file=finalOut,sep="\t")
+  
+  t2 <- tempfile()
+  write.table(comb[c("chr.ds","dsStart","dsStop","label","zero","strand")],
+              file=t2,sep="\t",quote=FALSE,col.names=FALSE,row.names=FALSE)
+  cmd5 <- paste("/home/wespisea/bin/bedtools2/bin/sortBed",
+                " -i ", t2,
+                " > ", dsFinalOut) 
+  
+}
+
+
+
+
+
 
