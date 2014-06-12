@@ -249,8 +249,32 @@ getAllTfbsInput <- function(){
   comb <- joinUnevenDfs(joinUnevenDfs(uw,haib),sydh) 
   
 }
+#chr3:112999878-113000000_+
+log2safe <- function(x){
+  if(x == 0){
+    return(0)
+  }
+  else{
+    log2(x)
+  }
+}
 
-
+readInNarrowPeakIntersect <- function(peakFile="/home/wespisea/data/ctcf/MACS2//HaibTfbsH1hescCtcfsc5916V0416102AlnRep1_HaibTfbsH1hescRxlchV0416102AlnRep1_peaks.narrowPeak_exonCosi"){
+  d <- read.csv(file=peakFile, stringsAsFactors=FALSE,header=FALSE,sep="\t")
+  colnames(d) <- c("chr","startPos","stopPos","label","zero","strand",
+                   "peakChr","peakStart","peakStop","peakFile","display","unknown","foldChange","negLog10pvalue","negLog10qValue","relativeSummitDist","overlapBp")
+  d$unknown <- NULL
+  d$zero <- NULL
+  d$strand <- NULL
+  d$display <- NULL
+  d$overlapBp <- NULL
+  d$foldChange <- as.numeric(ifelse(d$foldChange == ".", 0,d$foldChange  ))
+  d$change <- as.numeric(ifelse(d$foldChange == 0, 0,2^(d$foldChange)  ))
+  d$isPeak <- as.numeric(ifelse(d$foldChange == 0, 0, 1))
+  ds <- as.data.frame(group_by(d,label) %.% summarise(sumFoldChange=log2safe(sum(change)),
+                                                peakCount = sum(isPeak)))
+  ds
+}
 
 
 getCtcfWithRNASeq <- function(){
@@ -284,11 +308,7 @@ getCtcfWithRNASeq <- function(){
   rnaSeq.peaks.df <- rnaSeq.peaks.df[which(rnaSeq.peaks.df$objStatus != "replaced - object is identifying wrong peaks" |
                                              is.na(rnaSeq.peaks.df$objStatus)),]
   rnaSeq.peaks.df <- rnaSeq.peaks.df[-which(rnaSeq.peaks.df$controlId.cntrl %in% c("wgEncodeEH000706","wgEncodeEH000771")),]
-  
-  
-  
-  
-  
+    
   rnaSeq.peaks.df$localFile <- paste0(clusterDir,rnaSeq.peaks.df$fileEnding)
   rnaSeq.peaks.df$downloadCmd <- paste0("wget --continue ",rnaSeq.peaks.df$filename,
                                         " -O ",rnaSeq.peaks.df$localFile)
@@ -344,9 +364,47 @@ getCtcfWithRNASeq <- function(){
     
   }
   tfbs.peaks$narrowPeak <- with(tfbs.peaks,paste0(localDir,"/",name,"_peaks.narrowPeak"))
+  tfbs.peaks$narrowPeakDsExon <- with(tfbs.peaks,paste0(localDir,"/",name,"_peaks.narrowPeak_exonCosi"))
+  exonCosiDownstream <- "/home/wespisea/work/research/researchProjects/coexpr/lncNET/data/exonCosi_dsRegion.bed6"
+  ##/home/wespisea/bin/bedtools2/bin/intersectBed -wao -a /home/wespisea/work/research/researchProjects/coexpr/lncNET/data/exonCosi_dsRegion.bed6 -b UwTfbsNhlfCtcfStdAlnRep1_UwTfbsNhlfInputStdAlnRep1_peaks.narrowPeak > ~/sandbox/bedBug
+  cmd.intersect <- paste0("/home/wespisea/bin/bedtools2/bin/intersectBed -wao",
+                          " -a ",exonCosiDownstream ,
+                          " -b ",tfbs.peaks$narrowPeak,
+                          " > ",tfbs.peaks$narrowPeakDsExon)
+  write(cmd.intersect,file="~/sandbox/exonIntercept")
+  system("chmod u+x ~/sandbox/exonIntercept")
+  suppressWarnings(system("~/sandbox/exonIntercept"))
   
-
+  
+  finalOut <- paste0(dataDir,"/exonCosi_dsRegion.tab")
+  rnaSeqExpr <- read.csv(file=finalOut,sep="\t",stringsAsFactors=FALSE)
+  tfbs.peaks$cell <- gsub(x=gsub(x=tfbs.peaks$cell,pattern="-",replacement=""),pattern="\\+",replacement="")
+  
+  df.together <- rnaSeqExpr[c("label")]
+  df.together$sumFoldChange <- -1
+  df.together$peakCount <- -1
+  for(i in seq_along(tfbs.peaks$narrowPeakDsExon)){
+    narrowPeakFile <- tfbs.peaks$narrowPeakDsExon[i]
+    localPeak <- readInNarrowPeakIntersect(peakFile=narrowPeakFile)
+    print(dim(localPeak))
+    tag <- with(tfbs.peaks[i,],paste(cell,lab,replicate,sep="_"))
+    df.together <- merge(x=df.together,y=localPeak, by = "label",all.x=TRUE,suffix=c("",paste0(".",tag)))
+  }
+  
+  peakOut <- paste0(dataDir,"/peakCount_foldChange.tab")
+  write.table(df.together,
+              file=peakOut,sep="\t",quote=FALSE,row.names=FALSE)
+  
+  for(i in seq_along(tfbs.peaks$narrowPeakDsExon)){
+    tag <- with(tfbs.peaks[i,],paste(cell,lab,replicate,sep="_"))
+    tfbs.peaks$tag[i] <- tag
+  }
+  annotOut <- paste0(dataDir,"/peakCount_foldChange_annot.tab")
+  write.table(tfbs.peaks,
+              file=annotOut,sep="\t",quote=FALSE,row.names=FALSE)
+  
 }
+
 
 getLastUrl <- function(x){
   splitUrl <- as.character(unlist(strsplit(x,"/")))
@@ -389,16 +447,72 @@ getCtcfPeakSeqWithRNASeq <- function(){
   
 }
 
+getPsiFileExons <- function(){
+  dataDir <- getFullPath("data")
+  trg <- paste0(dataDir,"/tx_paper.psi.tsv")
+  download.file(url="http://genome.crg.es/~dmitri/export/2014-06-02/tx_paper.psi.tsv",
+                destfile=trg)
+}
 
-
-getCosiFileExons <- funciton(){
+getCosiFileExons <- function(){
   dataDir <- getFullPath("data")
   trg <- paste0(trg,"/tx_paper.cosi.tsv")
   download.file(url="http://genome.crg.es/~dmitri/export/2014-06-02/tx_paper.cosi.tsv",
                 destfile=trg)
 }
 
-getCosiFileCellTypes <- funciton(){
+#http://genome.crg.es/~dmitri/export/2014-06-02/tx_paper.psi.tsv
+
+getPsiFileCellTypes <- function(){
+  dataDir <- getFullPath("data")
+  
+  trg.psi <- paste0(dataDir,"/tx_paper.psi.tsv")
+  finalOut <- paste0(dataDir,"/exonPsi_dsRegion.tab")
+  
+  trg.df <- read.csv(file=trg.psi,stringsAsFactors=FALSE,sep="\t")
+  cols <- colnames(trg.df)
+  rw <-strsplit(rownames(trg.df),"_")
+  trg.df$chr <- sapply(rw, function(x)x[1])  
+  # format(moDat2, scientific=FALSE)
+  trg.df$startPos <- sapply(rw, function(x)as.numeric(x[2])) 
+  trg.df$stopPos <- sapply(rw, function(x)as.numeric(x[3]))
+  trg.df$strand <- sapply(rw, function(x)x[4])
+  trg.df$label <- with(trg.df,paste0(chr,":",format(startPos, scientific=FALSE,collapse=TRUE),"-",format(stopPos, scientific=FALSE),"_",strand,sep=""))
+  trg.df$label <- gsub(trg.df$label, pattern=" ",replacement="")
+  trg.df$zero <- 0
+  rnaSeq <- read.csv(file=cshlRNAseqLocalTab,sep="\t",stringsAsFactor=FALSE)
+  rnaSeq <- rnaSeq[which(rnaSeq$type == "fastq"),]
+  rnaSeq$fileEnding <- rnaSeq$filename
+  rnaSeq$filename <- paste0(cshlRNAseqUrlBase,rnaSeq$filename)
+  rnaSeq$exp <- with(rnaSeq,paste(cell,localization,rnaExtract,replicate,sep="_"))
+  rnaSeqLID <- unique(rnaSeq[c("labExpId","exp","cell")])
+  
+  cols.split <- strsplit(cols, split="_")
+  cols.one <- sapply(cols.split, function(x)x[1])  
+  cols.two <- sapply(cols.split, function(x)x[2])  
+  
+  cols.one.exp <- sapply(cols.one, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"exp"])
+  cols.two.exp <- sapply(cols.two, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"exp"])
+  
+  cols.one.cell <- sapply(cols.one, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"cell"])
+  cols.two.cell <- sapply(cols.two, function(x)rnaSeqLID[which(rnaSeqLID$labExpId == x),"cell"])
+  
+  newCols <- gsub(x=gsub(x=as.character(unlist(cols.one.cell)),pattern="-",replacement=""),pattern="\\+",replacement="")
+  
+  oldCols <- colnames(trg.df)
+  oldCols[1:length(newCols)] <- newCols
+  colnames(trg.df) <- oldCols
+  
+  ds.df <- read.csv(file=exonDownstreamBedFileSortNoExonOverlap, stringsAsFactors=FALSE,
+                    sep="\t",header=FALSE)
+  colnames(ds.df) <- c("chr","startPos","stopPos","label","zero","strand")
+  comb <- merge(y=ds.df,x=trg.df, by =  c("label","zero","strand"),suffixes=c("",".ds"))
+  write.table(comb,file=finalOut,sep="\t")
+}
+
+
+
+getCosiFileCellTypes <- function(){
   dataDir <- getFullPath("data")
   trg <- paste0(dataDir,"/tx_paper.cosi.tsv")
   finalOut <- paste0(dataDir,"/exonCosi_dsRegion.tab")
