@@ -1,3 +1,11 @@
+############################################
+#
+#  To run this file, use the folowing command -> 
+#   source('~/work/research/researchProjects/encode/ctcf/analysis/main.R')
+#
+#
+
+
 homeFolder <- path.expand("~")
 getDataFile <- function(subpath){file.path(homeFolder, "data", subpath)}
 projectDir <- normalizePath(file.path(script.dir(), ".."))
@@ -324,7 +332,9 @@ getCtcfWithRNASeq <- function(){
   writeLines(con="~/sandbox/downloadCTCF_bamBaiControl",
              text=paste(totalDownload,rep(c("&",""),length.out=length(totalDownload))))
   # scpFile(file.local="~/sandbox/downloadCTCF_bamBaiControl", dir.remote="~/bin/") 
-  
+ simon.df <-  rnaSeq.peaks.df[rnaSeq.peaks.df$dataType == "RnaSeq",c("cell","lab","type","replicate","dataType","rnaExtract","filename")]
+  write.table(simon.df,
+              file=getFullPath("data/rnaSeqFastq.tab"),sep="\t",quote=FALSE,row.names=FALSE)
   
   tfbs.peaks.full <- rnaSeq.peaks.df[rnaSeq.Cntr.idx,]
 
@@ -506,7 +516,21 @@ getPsiFileCellTypes <- function(){
   ds.df <- read.csv(file=exonDownstreamBedFileSortNoExonOverlap, stringsAsFactors=FALSE,
                     sep="\t",header=FALSE)
   colnames(ds.df) <- c("chr","startPos","stopPos","label","zero","strand")
-  comb <- merge(y=ds.df,x=trg.df, by =  c("label","zero","strand"),suffixes=c("",".ds"))
+  ds.plus.df <- ds.df[which(ds.df$strand == "+"),]
+  ds.minus.df <- ds.df[which(ds.df$strand == "-"),]
+  
+  ds.plus.first <- as.data.frame(group_by(ds.plus.df, label) %.% 
+                                   mutate(minStartPos = min(startPos)) %.%
+                                   filter(startPos == minStartPos))
+  ds.plus.first$minStartPos <- NULL
+  
+  ds.minus.first <- as.data.frame(group_by(ds.minus.df, label) %.% 
+                                    mutate(maxStartPos = max(startPos)) %.%
+                                    filter(startPos == maxStartPos))
+  ds.minus.first$maxStartPos <- NULL
+  
+  ds.first.comb <- rbind(ds.plus.first,ds.minus.first)
+  comb <- merge(y=ds.first.comb,x=trg.df, by =  c("label","zero","strand"),suffixes=c("",".ds"))
   write.table(comb,file=finalOut,sep="\t")
 }
 
@@ -627,7 +651,7 @@ getCosiFileCellTypes <- function(){
   cmd5 <- paste("/home/wespisea/bin/bedtools2/bin/sortBed",
                 " -i ", t2,
                 " > ", dsFinalOut) 
-  
+  system(cmd5)
 }
 
 

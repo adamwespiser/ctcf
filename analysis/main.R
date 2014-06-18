@@ -1,3 +1,18 @@
+#      ______  .___________.  ______   _______                   
+#    /      | |           | /       ||   ____|                  
+#   |,----'`   ---|  |----`|  ,----'|  |__                     
+#  |  |          |  |     |  |     |   __|                    
+#  |  `----.    |  |     |  `----.|  |                       
+#  \______|    |__|      \______||__|                       
+#  
+#     .______   .______        ______          __   _______   ______ .___________.
+#     |   _  \  |   _  \      /  __  \        |  | |   ____| /      ||           |
+#    |  |_)  | |  |_)  |    |  |  |  |       |  | |  |__   |  ,----'`---|  |----`
+#   |   ___/  |      /     |  |  |  | .--.  |  | |   __|  |  |         |  |     
+#  |  |      |  |\  \----.|  `--'  | |  `--'  | |  |____ |  `----.    |  |     
+# | _|      | _| `._____| \______/   \______/  |_______| \______|    |__|     
+
+
 script.dir <- function() {
   # from http://stackoverflow.com/a/16046056
   dirname(sys.frame(1)$ofile)
@@ -24,6 +39,7 @@ readInTable <- function(file) read.table(file=file,stringsAsFactors=FALSE,header
 
 
 source(getFullPath("analysis/downloadData/getENCODE_ChIP_Seq.R"))
+source(getFullPath("analysis/exprPeaks.R"))
 
 
 
