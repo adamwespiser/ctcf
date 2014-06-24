@@ -742,29 +742,51 @@ getCorrPeaksPSI <- function(){
   
   ggplot(pes.pearson.fdr, aes(x=pearsonCorr))+geom_density() + 
     xlab("pearsonCorr") + ylab("density") + theme_bw()+
-    ggtitle(paste("Shuffled downstream regions\nPearson Correlation Coeff\nBetween PSI and foldChangeof shuffled exons\n(pass FDR of 0.05)\nN=",
+    ggtitle(paste("shuffled downstream regions\npearson correlation coeff\nbetween PSI and foldChangeof shuffled exons\n(pass FDR of 0.05)\nN=",
                   dim(pes.pearson.fdr)[1]))
   ggsave(paste0(outdir,"PSI-shuffle-LogCorr-FDR_pass-density.png"), height=7,width=7)
   
   
   ggplot(pesc.nona, aes(x=pearsonCorr))+geom_density() + 
     xlab("pearsonCorr") + ylab("density") + theme_bw()+
-    ggtitle(paste("Shuffled downstream regions(regions w/ defined corr only)\nPearson Correlation Coeff\nBetween PSI and foldChangeof shuffled exons\n(in at least 3 cell types)\nN=",
+    ggtitle(paste("shuffled downstream regions(regions w/ defined corr only)\npearson correlation coeff\nbetween PSI and foldChangeof shuffled exons\n(in at least 3 cell types)\nN=",
                   dim(pesc.nona)[1]))
   ggsave(paste0(outdir,"PSI-shuffleCorrOnly-LogCorr-gt3Expr-density.png"), height=7,width=7)
   
   ggplot(pesc.pearson.fdr, aes(x=pearsonCorr))+geom_density() + 
     xlab("pearsonCorr") + ylab("density") + theme_bw()+
-    ggtitle(paste("Shuffled downstream regions(regions w/ defined corr only)\nPearson Correlation Coeff\nBetween PSI and foldChangeof shuffled exons\n(pass FDR of 0.05)\nN=",
+    ggtitle(paste("shuffled downstream regions(regions w/ defined corr only)\npearson correlation coeff\nbetween PSI and foldChangeof shuffled exons\n(pass FDR of 0.05)\nN=",
                   dim(pesc.pearson.fdr)[1]))+xlim(-1,1)
   ggsave(paste0(outdir,"PSI-shuffleCorrOnly-LogCorr-FDR_pass-density.png"), height=7,width=7)
   
   
   ggplot(pena.pearson, aes(x=pearsonCorr))+geom_density() + 
     xlab("pearsonCorr") + ylab("density") + theme_bw()+
-    ggtitle(paste("Downstream regions(regions w/ defined correlation only)\nPearson Correlation Coeff\nBetween PSI and foldChangeof  exons\n(if no peak in cell  -> foldChange in cell = NA)\nN=",
+    ggtitle(paste("downstream regions(regions w/ defined correlation only)\npearson correlation coeff\nbetween PSI and foldChangeof  exons\n(if no peak in found  -> foldChange for exon in cell = NA)\nN=",
                   dim(pena.pearson)[1]))
   ggsave(paste0(outdir,"PSI-noPeakNa-LogCorr-gt3Expr-density.png"), height=7,width=7)
+ 
+  ggplot(pena.pearson, aes(x=pearsonCorr))+geom_bar(binwidth=0.05) + 
+    xlab("pearsonCorr") + ylab("density") + theme_bw()+
+    ggtitle(paste("downstream regions(regions w/ defined correlation only)\npearson correlation coeff\nbetween PSI and foldChangeof  exons\n(if no peak in found  -> foldChange for exon in cell = NA)\nN=",
+                  dim(pena.pearson)[1]))
+  ggsave(paste0(outdir,"PSI-noPeakNa-LogCorr-gt3Expr-bars.png"), height=7,width=7)
+  
+  ggplot(pena.pearson.fdr, aes(x=pearsonCorr))+geom_bar(binwidth=0.05) + 
+    xlab("pearsonCorr") + ylab("density") + theme_bw()+
+    ggtitle(paste("downstream regions(regions w/ defined correlation only)\npearson correlation coeff\nbetween PSI and foldChange of  exons\n(if no peak in found  -> foldChange for exon in cell = NA)\nN=",
+                  dim(pena.pearson.fdr)[1]))
+  ggsave(paste0(outdir,"PSI-noPeakNa-LogCorr-gt3Expr-fdrPass-bars.png"), height=7,width=7)
+  
+  #cellTypesBothValues
+  ggplot(pena.pearson, aes(x=cellTypesBothValues))+geom_bar(binwidth=0.5) + 
+    xlab("# of cells types w/ (PSI and fold change > 0)") + ylab("number of exons found") + theme_bw()+
+    ggtitle(paste("downstream regions(regions w/ defined correlation only)\ncell types with exon experssion\nand MACS peak foldChange > 0\n(if no peak in cell  -> foldChange in cell = NA)\nN=",
+                  dim(pena.pearson)[1]))+
+    xlim(0,max(pena.pearson$cellTypesBothValues)+1)
+  ggsave(paste0(outdir,"PSI-noPeakNa-cellTypesFound-bars.png"), height=7,width=7)
+  
+  
   
 }
 
