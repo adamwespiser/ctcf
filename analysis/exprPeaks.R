@@ -503,6 +503,14 @@ getCorrPeaksPSI <- function(){
     theme_bw()
   
   
+  PSI.mat <- as.matrix(pe[pe.expr.cols])
+  foldChange.mat <- as.matrix(pe[pe.fold.cols])
+  #> dim(foldChange.mat)
+  #[1] 165352     15
+  fc.vec <- as.vector(foldChange.mat)
+  psi.vec <- as.vector(PSI.mat)
+  
+  
   pe$peakFracExprGroup   <- cut(x=pe$peakFracExpr,breaks=(1:length(pe.count.cols))/length(pe.count.cols))
   
   pe$pearsonCorr   <- apply(pe[c(pe.expr.cols,pe.fold.cols)],1,
@@ -610,18 +618,18 @@ getCorrPeaksPSI <- function(){
   
   pe.peakNa <- replaceRowZeroToNa(pe,pe.fold.cols) #getNumberOfNonNaBoth
   pe.peakNa$cellTypesBothValues   <- apply(pe.peakNa[c(pe.expr.cols,pe.fold.cols)],1,
-                                         function(x)getNumberOfNonNaBoth(x[1:length(pe.expr.cols)],
-                                                                        x[(length(pe.expr.cols)+1):(length(pe.expr.cols)+length(pe.fold.cols))],
-                                                                        method="pearson"))
+                                           function(x)getNumberOfNonNaBoth(x[1:length(pe.expr.cols)],
+                                                                           x[(length(pe.expr.cols)+1):(length(pe.expr.cols)+length(pe.fold.cols))],
+                                                                           method="pearson"))
   
   pe.peakNa$pearsonCorrPvalue   <- apply(pe.peakNa[c(pe.expr.cols,pe.fold.cols)],1,
-                                                   function(x)applyCorrByNaPvalueBothCols(x[1:length(pe.expr.cols)],
-                                                                                  x[(length(pe.expr.cols)+1):(length(pe.expr.cols)+length(pe.fold.cols))],
-                                                                                  method="pearson"))
+                                         function(x)applyCorrByNaPvalueBothCols(x[1:length(pe.expr.cols)],
+                                                                                x[(length(pe.expr.cols)+1):(length(pe.expr.cols)+length(pe.fold.cols))],
+                                                                                method="pearson"))
   pe.peakNa$pearsonCorr   <- apply(pe.peakNa[c(pe.expr.cols,pe.fold.cols)],1,
-                                             function(x)applyCorrByNaColsBothCols(x[1:length(pe.expr.cols)],
-                                                                      x[(length(pe.expr.cols)+1):(length(pe.expr.cols)+length(pe.fold.cols))],
-                                                                      method="pearson"))
+                                   function(x)applyCorrByNaColsBothCols(x[1:length(pe.expr.cols)],
+                                                                        x[(length(pe.expr.cols)+1):(length(pe.expr.cols)+length(pe.fold.cols))],
+                                                                        method="pearson"))
   pena.nona <- pe.peakNa[!is.na(pe.peakNa$pearsonCorrPvalue),]
   pena.pearson <- pena.nona[order(pena.nona$pearsonCorrPvalue,decreasing=FALSE),]
   pena.pearson$alpha <- 0.25
@@ -630,8 +638,9 @@ getCorrPeaksPSI <- function(){
   pena.pearson$FDRpvalueCutoff <- with(pena.pearson,alpha*(j/M))
   FDRpassShuffleCorrPeakNa <- with(pena.pearson, which(pearsonCorrPvalue < alpha*(j/M)))
   pena.pearson.fdr <- pena.pearson[FDRpassShuffleCorrPeakNa,]
-  
-  
+  pena.pearson$cutoff_0_25 <-  with(pena.pearson, alpha*(j/M))
+  pena.pearson$cutoff_0_05 <-  with(pena.pearson, 0.05*(j/M))
+
   
   
   ggplot(as.data.frame(group_by(pe,cellsWithPeaks,exprCount) %.% summarise(count=length(label))), aes(x=cellsWithPeaks,y=exprCount,label=count,fill=count)) + 
@@ -658,10 +667,28 @@ getCorrPeaksPSI <- function(){
     ggtitle("average PSI for CTCF peaks found\nversus average fold change above bkgd")
   ggsave(paste0(outdir,"foldChangeGroup-avePSI-boxplot.png"), height=5,width=10)
   
-  ggplot(pe, aes(x=FoldChangeave,y=PSIave,fill=peakCountSum))+geom_point() + 
+  ggplot(pe, aes(x=FoldChangeave,y=PSIave,fill=peakCountSum))+geom_point() + geom_density2d() +
     xlab("ave CTCF peaks fold change") + ylab("ave PSI") + theme_bw()+
-    ggtitle("average PSI for CTCF peaks found")
+    ggtitle("average PSI for CTCF peaks found")+
+    theme(axis.text=element_text(size=12),
+          axis.title=element_text(size=14,face="bold"))
   ggsave(paste0(outdir,"foldChangeAve-avePSI-point.png"), height=7,width=7)
+  
+  cellExprFc <- data.frame(foldChange=fc.vec,PSI=psi.vec)
+  ggplot(cellExprFc, aes(x=foldChange,y=PSI)) + geom_density2d() + 
+    xlab("CTCF peaks fold change") + ylab("ave PSI") + theme_bw()+
+    ggtitle("PSI of exon vs. downstream CTCF\nFold change")+
+    theme(axis.text=element_text(size=12),
+          axis.title=element_text(size=14,face="bold"))
+  ggplot(cellExprFc, aes(x=PSI)) + geom_density() + 
+    xlab("PSI of exon") + theme_bw() + 
+    theme(axis.text=element_text(size=12),
+          axis.title=element_text(size=14,face="bold"))
+  
+  ggplot(cellExprFc, aes(x=foldChange)) + geom_density() + 
+    xlab("CTCF peaks fold change") + theme_bw() + 
+    theme(axis.text=element_text(size=12),
+          axis.title=element_text(size=14,face="bold"))
   
   #wide
   
@@ -765,7 +792,7 @@ getCorrPeaksPSI <- function(){
     ggtitle(paste("downstream regions(regions w/ defined correlation only)\npearson correlation coeff\nbetween PSI and foldChangeof  exons\n(if no peak in found  -> foldChange for exon in cell = NA)\nN=",
                   dim(pena.pearson)[1]))
   ggsave(paste0(outdir,"PSI-noPeakNa-LogCorr-gt3Expr-density.png"), height=7,width=7)
- 
+  
   ggplot(pena.pearson, aes(x=pearsonCorr))+geom_bar(binwidth=0.05) + 
     xlab("pearsonCorr") + ylab("density") + theme_bw()+
     ggtitle(paste("downstream regions(regions w/ defined correlation only)\npearson correlation coeff\nbetween PSI and foldChangeof  exons\n(if no peak in found  -> foldChange for exon in cell = NA)\nN=",
@@ -786,7 +813,20 @@ getCorrPeaksPSI <- function(){
     xlim(0,max(pena.pearson$cellTypesBothValues)+1)
   ggsave(paste0(outdir,"PSI-noPeakNa-cellTypesFound-bars.png"), height=7,width=7)
   
+  pena.melt <- melt(pena.pearson[c("j","pearsonCorrPvalue","cutoff_0_25","cutoff_0_05")],id.var="j")
   
+  ggplot(pena.pearson, aes(x=j,y=pearsonCorrPvalue)) + geom_point() +
+    scale_y_log10() + scale_x_log10()+
+    annotation_logticks() + theme_bw()+
+    xlab("exons ordered by p-value")+
+    ylab("p-value")+
+    ggtitle(paste("p-value vs. FDR cutoff @ 0.25(blue) & 0.05(red)\ndownstream regions(regions w/ defined correlation only)\ncell types with exon experssion\nand MACS peak foldChange > 0\n(if no peak in cell  -> foldChange in cell = NA)\nN =",
+                  dim(pena.pearson)[1]))+
+    annotate("text",x=2,y=0.00004,label="SEMA-3B",color="black",size=4)+
+    annotate("line",x=pena.pearson$j,y= pena.pearson$cutoff_0_05,color="red")+
+    annotate("line",x=pena.pearson$j,y= pena.pearson$cutoff_0_25,color="blue")+
+    annotate("point",x=pena.pearson$j[2],y= pena.pearson$pearsonCorrPvalue[2],color="yellow",alpha=I(0.5),size=I(10))
+  ggsave(paste0(outdir,"PSI-noPeakNa-pValVsCutoff-line.png"), height=7,width=7)
   
 }
 

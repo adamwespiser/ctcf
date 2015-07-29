@@ -1,2 +1,10 @@
 *.un~
 *.swp
+||||||| merged common ancestors
+=======
+.Rproj.user
+.Rhistory
+.RData
+./data
+*.un~
+>>>>>>> adcadb17ea2b832c60e2e429e82d349a412e1c0b
