@@ -1,11 +1,10 @@
 ##CTCF and RNA splicing
+[file manifest](./docs/file-manifest.md)
 
 ### Background:
-DNA -> RNA -> protein
-DNA(gene) -> RNA primary transcript -> RNA mature transcript -> protein.
-Splicing is the process of converting a primary to mature RNA transcript.
-Each gene consists of two categories of sequences, Exons, which are kept in the mature transcript, and Introns which are disregarded. 
-
+The central dogma of biology supposes that: `DNA -> RNA -> protein`. Meaning DNA in the genome is converted to RNA, which is then converted to proteins. These proteins are cell's workhorse, responsible for faciliting the biochemical reactions needed to stabilze an organism. 
+The process of transcription consists of: `DNA(gene) -> RNA primary transcript -> RNA mature transcript`, where 'RNA splicing' is the conversion between primary and mature RNA transcripts. Each gene consists of two categories of sequences, Exons, which are usually kept in the mature transcript, and Introns which are disregarded. Usually, introns and exons will be interleaved, and the mature transcript will be a continuous sequence of exons only. Changes in which exons are included can greatly affect the quantity and qualities of the protein being made.   
+Epigenetics is the study of factors which interact with the genome to regulate and control transcription. In the last few years, we have learned how to quantify a proteins binding to specific genome regions(CHiP-seq), revealing a vastly complicated network of interactions unique to each cell type. In this project, we are going to look at the possibility that CTCF, a large DNA binding protein, may be interfering with transcription and altering the mature transcript through binding.     
 
 ### Objective
 To determine if the presence of CTCF protein near a gene changes the RNA structure transcribed from the gene. 
